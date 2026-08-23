@@ -13,3 +13,4 @@ data/cache/
 data/history.db
 *.db
 graphify-out/
+data/feedback.json
