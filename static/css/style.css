@@ -23,8 +23,16 @@
 }
 
 *{box-sizing:border-box; margin:0}
-body{background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; padding:48px 24px; transition: background .2s, color .2s}
+body{background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; padding:24px; transition: background .2s, color .2s}
 .wrap{max-width:1100px; margin:0 auto}
+
+.privacy-banner{
+  display:flex; gap:16px; align-items:flex-start; justify-content:space-between;
+  background:var(--paper-2); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; font-size:13px; line-height:1.5; margin-bottom:24px;
+}
+.privacy-banner strong{display:block; margin-bottom:4px}
+.privacy-banner button{flex-shrink:0; align-self:center}
 
 header{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:32px; flex-wrap:wrap; gap:16px}
 h1{font-family:'Fraunces',serif; font-weight:600; font-size:28px; letter-spacing:-.01em}
@@ -41,6 +49,15 @@ button:hover, .btn:hover{border-color:var(--ink); transform:translateY(-1px)}
 button.primary, .btn.primary{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 button.primary:hover, .btn.primary:hover{opacity:.9}
 button:disabled{opacity:.5; cursor:not-allowed}
+
+.error-box{
+  background:#fff0f0; border:1px solid #d9534f; color:#681d1a; border-radius:6px;
+  padding:12px 14px; font-size:13px; margin-bottom:20px; line-height:1.5;
+}
+.info-box{
+  background:var(--paper-2); border:1px solid var(--line); border-radius:6px;
+  padding:12px 14px; font-size:13px; margin-bottom:20px; line-height:1.5; color:var(--muted);
+}
 
 .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:40px; border-radius:8px; overflow:hidden}
 .metric{background:var(--paper); padding:20px}
@@ -67,9 +84,11 @@ h2{font-family:'Fraunces',serif; font-weight:500; font-size:16px; margin:0 0 16p
 }
 .upload:hover{border-color:var(--ink); color:var(--ink)}
 .upload.dragover{border-color:var(--pine); background:rgba(47,111,94,.08)}
+.upload-meta{font-size:13px; color:var(--muted); line-height:1.5}
 
 .empty-state{text-align:center; padding:48px 24px; color:var(--muted)}
 .empty-state h3{font-family:'Fraunces',serif; font-weight:500; color:var(--ink); margin-bottom:8px}
+.empty-state p{max-width:420px; margin:0 auto; line-height:1.5}
 
 .loading{
   display:none; align-items:center; justify-content:center; gap:10px;
@@ -82,7 +101,8 @@ h2{font-family:'Fraunces',serif; font-weight:500; font-size:16px; margin:0 0 16p
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
-table{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:13px}
+.table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{width:100%; min-width:320px; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:13px}
 thead th{text-align:left; font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:500; padding-bottom:10px; border-bottom:1px solid var(--ink)}
 th:not(:first-child),td:not(:first-child){text-align:right}
 tbody td{padding:12px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums}
@@ -97,6 +117,14 @@ tbody tr:hover{background:var(--paper-2); cursor:pointer}
   background:var(--paper-2); color:var(--muted); border:1px solid var(--line);
 }
 
+.history-card{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px;
+  font-size:13px; cursor:pointer; transition:.15s;
+}
+.history-card:hover{background:var(--paper-2)}
+.history-card button{margin-left:auto}
+
 footer{margin-top:48px; padding-top:16px; border-top:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px}
 
 .tour-highlight{position:relative; z-index:1000; box-shadow:0 0 0 4px var(--pine); border-radius:6px}
@@ -110,8 +138,10 @@ footer{margin-top:48px; padding-top:16px; border-top:1px solid var(--line); font
 @media (max-width: 800px){
   .metrics{grid-template-columns:repeat(2,1fr)}
   .filters input, .filters select{flex:1 1 100%}
+  .privacy-banner{flex-direction:column}
 }
 @media (max-width: 500px){
   .metrics{grid-template-columns:1fr}
   header{flex-direction:column; align-items:flex-start}
+  body{padding:16px}
 }

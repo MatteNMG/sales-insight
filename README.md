@@ -47,7 +47,9 @@ Run the polished dashboard:
 python -m flask --app webapp run
 ```
 
-Features: dark mode, drag-and-drop CSV upload, demo data, dynamic date/platform filters, drill-down on products, guided tour, PDF/Excel export.
+Features: dark mode, drag-and-drop CSV upload with format check, demo data, dynamic date/platform filters, drill-down on products, guided tour, loading/empty states, mobile-responsive tables, PDF/Excel export and local feedback form.
+
+Privacy note: CSV files are processed by the local Flask server. No sales data is sent to external services; currency conversion uses the free Frankfurter API for exchange rates only.
 
 ## Streamlit dashboard (alternative)
 
@@ -86,6 +88,8 @@ Edit `config/report.json` to change company name, logo, colors and base currency
 │   ├── charts_interactive.py # Plotly chart builders (web app)
 │   ├── insights.py         # heuristic insight rules
 │   ├── validation.py       # data-quality warnings
+│   ├── csv_checker.py      # pre-upload CSV format validator
+│   ├── feedback.py         # local feedback storage
 │   ├── history.py          # SQLite persistence
 │   ├── currency.py         # Frankfurter exchange-rate client
 │   ├── config.py           # report branding config

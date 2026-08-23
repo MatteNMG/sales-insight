@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import traceback
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,8 +14,10 @@ from flask import Flask, jsonify, render_template, request, send_file
 
 from src.charts_interactive import build_charts, product_trend_chart
 from src.config import ReportConfig
+from src.csv_checker import check_csv
 from src.demo import generate_demo_orders
 from src.export_excel import export_excel
+from src.feedback import list_feedback, save_feedback
 from src.history import load_orders, upsert_orders
 from src.metrics import (
     average_order_value,
@@ -24,7 +27,7 @@ from src.metrics import (
     total_revenue,
     total_units,
 )
-from src.parser import normalize, read_csv
+from src.parser import load_files, normalize, read_csv
 from src.report import render_executive_summary, render_html, write_pdf
 from src.validation import validate_orders
 
@@ -53,7 +56,6 @@ def _summary(orders: List[Any]) -> Dict[str, Any]:
     orders_count = total_orders(orders)
     aov = average_order_value(orders)
 
-    # simple delta vs first half of available date range
     by_date = revenue_by_date(orders)
     if by_date:
         dates = list(by_date.keys())
@@ -79,9 +81,10 @@ def _summary(orders: List[Any]) -> Dict[str, Any]:
     }
 
 
-def _payload(orders: List[Any]) -> Dict[str, Any]:
+def _payload(orders: List[Any], include_orders: bool = True) -> Dict[str, Any]:
+    summary = _summary(orders)
     return {
-        "summary": _summary(orders),
+        "summary": summary,
         "charts": build_charts(orders),
         "orders": [
             {
@@ -92,8 +95,8 @@ def _payload(orders: List[Any]) -> Dict[str, Any]:
                 "quantity": o.quantity,
                 "revenue": round(o.effective_revenue, 2),
             }
-            for o in orders[-50:]
-        ],
+            for o in (orders[-50:] if len(orders) > 50 else orders)
+        ] if include_orders else [],
     }
 
 
@@ -109,6 +112,20 @@ def demo():
     return jsonify(_payload(orders))
 
 
+@app.route("/api/check", methods=["POST"])
+def check():
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "No file provided"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"ok": False, "error": "Empty filename"}), 400
+    try:
+        result = check_csv(io.StringIO(file.stream.read().decode("utf-8")))
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"Unexpected error: {exc}"}), 500
+
+
 @app.route("/api/upload", methods=["POST"])
 def upload():
     if "file" not in request.files:
@@ -121,8 +138,21 @@ def upload():
     currency = request.form.get("currency", "EUR")
     base = request.form.get("base_currency", DEFAULT_BASE_CURRENCY)
 
-    df = read_csv(io.StringIO(file.stream.read().decode("utf-8")))
-    orders = normalize(df, platform=platform, default_currency=currency, base_currency=base)
+    try:
+        df = read_csv(io.StringIO(file.stream.read().decode("utf-8")))
+    except UnicodeDecodeError as exc:
+        return jsonify({"error": f"Encoding error: {exc}. Save the file as UTF-8 and retry."}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Could not read CSV: {exc}"}), 400
+
+    try:
+        orders = normalize(df, platform=platform, default_currency=currency, base_currency=base)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"error": f"Failed to normalize CSV: {exc}"}), 400
+
     upsert_orders(orders, app.config["DB_PATH"])
     return jsonify(_payload(orders))
 
@@ -132,12 +162,48 @@ def filters():
     start = request.args.get("start")
     end = request.args.get("end")
     platforms = request.args.getlist("platform")
-    orders = _orders_from_db(
-        start=date.fromisoformat(start) if start else None,
-        end=date.fromisoformat(end) if end else None,
-        platforms=platforms if platforms else None,
-    )
+    try:
+        orders = _orders_from_db(
+            start=date.fromisoformat(start) if start else None,
+            end=date.fromisoformat(end) if end else None,
+            platforms=platforms if platforms else None,
+        )
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
     return jsonify(_payload(orders))
+
+
+@app.route("/api/latest")
+def latest():
+    """Return the most recent data stored in the local history."""
+    orders = _orders_from_db()
+    return jsonify(_payload(orders, include_orders=False))
+
+
+@app.route("/api/history")
+def history():
+    """Return available date ranges and platforms in local history."""
+    import sqlite3
+
+    init_db = True
+    if not app.config["DB_PATH"].exists():
+        return jsonify({"batches": []})
+    with sqlite3.connect(app.config["DB_PATH"]) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT MIN(order_date) as min_date, MAX(order_date) as max_date, COUNT(DISTINCT platform) as platforms, COUNT(*) as rows FROM orders"
+        ).fetchall()
+    batches = [
+        {
+            "min_date": r["min_date"],
+            "max_date": r["max_date"],
+            "platforms": r["platforms"],
+            "rows": r["rows"],
+        }
+        for r in rows
+        if r["rows"]
+    ]
+    return jsonify({"batches": batches})
 
 
 @app.route("/api/product/<path:product_name>/trend")
@@ -145,6 +211,18 @@ def product_trend(product_name: str):
     orders = _orders_from_db()
     chart_json = product_trend_chart(orders, product_name)
     return jsonify({"chart": json.loads(chart_json)})
+
+
+@app.route("/api/feedback", methods=["POST"])
+def feedback():
+    data = request.get_json(silent=True) or {}
+    rating = data.get("rating", 0)
+    comment = data.get("comment", "")
+    email = data.get("email", "")
+    if not comment or not (1 <= int(rating) <= 5):
+        return jsonify({"error": "Rating (1-5) and comment are required"}), 400
+    save_feedback(int(rating), comment, email)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/export/<format>")
