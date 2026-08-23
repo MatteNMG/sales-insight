@@ -11,7 +11,8 @@ CLI tool and dashboard that turn e-commerce CSV exports (Etsy, Shopify, Amazon S
 - **Smart insights**: sales drops, low margins, stock-runout forecast, refund spikes, YoY comparison, product bundles.
 - **Custom branding** via JSON config (logo, colors, company name).
 - **Multiple exports**: HTML, PDF, Excel with live formulas, executive summary.
-- **Streamlit dashboard** with demo mode and download buttons.
+- **Flask web app** with custom design, dark mode, dynamic filters, drill-down and demo mode.
+- Optional Streamlit UI (`app.py`).
 - **Automation scaffolding**: Shopify Admin API client, weekly email scheduler, Telegram/email alerts.
 
 ## Install
@@ -38,7 +39,17 @@ Platform is auto-detected. Options:
 - `--db data/history.db` — persist orders to SQLite history
 - `--history-only` — generate report from accumulated history
 
-## Streamlit dashboard
+## Flask web app
+
+Run the polished dashboard:
+
+```bash
+python -m flask --app webapp run
+```
+
+Features: dark mode, drag-and-drop CSV upload, demo data, dynamic date/platform filters, drill-down on products, guided tour, PDF/Excel export.
+
+## Streamlit dashboard (alternative)
 
 ```bash
 streamlit run app.py
@@ -71,7 +82,8 @@ Edit `config/report.json` to change company name, logo, colors and base currency
 │   ├── schema.py           # unified data model and platform column maps
 │   ├── parser.py           # CSV ingestion + currency conversion
 │   ├── metrics.py          # pure metric functions
-│   ├── charts.py           # matplotlib chart builders
+│   ├── charts.py           # matplotlib chart builders (PDF/HTML)
+│   ├── charts_interactive.py # Plotly chart builders (web app)
 │   ├── insights.py         # heuristic insight rules
 │   ├── validation.py       # data-quality warnings
 │   ├── history.py          # SQLite persistence
@@ -84,10 +96,13 @@ Edit `config/report.json` to change company name, logo, colors and base currency
 │   ├── scheduler.py        # weekly email scheduler
 │   ├── alerts.py           # email/Telegram alerting
 │   └── api_clients/        # Etsy / Shopify API clients
+├── templates/              # Flask HTML templates
+├── static/                 # CSS / JS assets
 ├── tests/                  # pytest suite
 ├── data/samples/           # synthetic CSV samples
 ├── config/report.json      # branding config
 ├── app.py                  # Streamlit UI
+├── webapp.py               # polished Flask dashboard
 ├── ROADMAP.md              # public roadmap
 └── pyproject.toml
 ```
