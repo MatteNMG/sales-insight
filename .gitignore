@@ -7,4 +7,8 @@ venv/
 .mypy_cache/
 *.html
 *.pdf
+*.xlsx
+data/cache/
+data/history.db
+*.db
 graphify-out/

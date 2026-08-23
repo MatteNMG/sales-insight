@@ -28,16 +28,27 @@ class UnifiedOrder:
     refund: bool = False
     country: Optional[str] = None
     stock_quantity: Optional[int] = None
+    base_currency: str = "EUR"
+    unit_price_base: Optional[float] = None
+    revenue_base: Optional[float] = None
+
+    @property
+    def effective_revenue(self) -> float:
+        return self.revenue_base if self.revenue_base is not None else self.revenue
+
+    @property
+    def effective_unit_price(self) -> float:
+        return self.unit_price_base if self.unit_price_base is not None else self.unit_price
 
     @property
     def net_revenue(self) -> float:
-        return self.revenue - self.fees - self.shipping_cost
+        return self.effective_revenue - self.fees - self.shipping_cost
 
     @property
     def gross_margin(self) -> float:
         if self.cost_per_unit is None:
             return 0.0
-        return (self.unit_price - self.cost_per_unit) * self.quantity
+        return (self.effective_unit_price - self.cost_per_unit) * self.quantity
 
 
 # Columns expected in each platform export. None means "not available / infer".

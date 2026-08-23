@@ -1,15 +1,18 @@
 # Sales Insight
 
-CLI tool that turns e-commerce CSV exports (Etsy, Shopify, Amazon Seller) into a clean HTML/PDF sales report with charts and heuristic insights.
+CLI tool and dashboard that turn e-commerce CSV exports (Etsy, Shopify, Amazon Seller) into HTML/PDF/Excel reports with charts and heuristic insights.
 
 ## Features
 
-- Normalizes CSV exports from Etsy, Shopify and Amazon Seller into one unified schema.
-- Computes core metrics: revenue, units sold, average order value, refund rate, top/flop products.
-- Generates charts: revenue trend, top products, revenue by country, margin/net revenue per product.
-- Surfaces automatic insights: sales drops, low margins, stock runout risk, refund spikes.
-- Produces a single HTML report (and optional PDF) with one command.
-- Optional drag-and-drop Streamlit UI.
+- **Multi-platform CSV normalization** for Etsy, Shopify, Amazon Seller.
+- **Multi-currency support** with free Frankfurter exchange-rate API and local cache.
+- **Core metrics**: revenue, units sold, average order value, refund rate, top/flop products.
+- **Persistent SQLite history** to accumulate data and analyze long-term trends.
+- **Smart insights**: sales drops, low margins, stock-runout forecast, refund spikes, YoY comparison, product bundles.
+- **Custom branding** via JSON config (logo, colors, company name).
+- **Multiple exports**: HTML, PDF, Excel with live formulas, executive summary.
+- **Streamlit dashboard** with demo mode and download buttons.
+- **Automation scaffolding**: Shopify Admin API client, weekly email scheduler, Telegram/email alerts.
 
 ## Install
 
@@ -19,52 +22,73 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-## Usage
+## CLI usage
 
-Generate HTML + PDF report from one or more CSV files:
+Generate HTML + PDF + Excel from CSV files:
 
 ```bash
-python -m src.cli data/samples/etsy_orders.csv -o etsy_report --pdf
-python -m src.cli data/samples/shopify_orders.csv data/samples/amazon_orders.csv -o combined --pdf
+python -m src.cli data/samples/etsy_orders.csv -o etsy_report --pdf --excel --executive
+python -m src.cli data/samples/shopify_orders.csv data/samples/amazon_orders.csv -o combined --pdf --excel --config config/report.json --db data/history.db
 ```
 
-Platform is auto-detected from the CSV headers. You can force it with `--platform etsy|shopify|amazon`.
+Platform is auto-detected. Options:
+- `--platform etsy|shopify|amazon` — force platform
+- `--currency EUR` — default currency when missing
+- `--base-currency EUR` — convert all amounts to this currency
+- `--db data/history.db` — persist orders to SQLite history
+- `--history-only` — generate report from accumulated history
 
-Run the Streamlit UI:
+## Streamlit dashboard
 
 ```bash
 streamlit run app.py
 ```
 
-## Supported platforms & columns
+Choose **Demo data** to explore the dashboard without uploading real files.
 
-| Field | Etsy | Shopify | Amazon |
-|---|---|---|---|
-| Order ID | `Order ID` | `Name` | `order-id` |
-| Date | `Sale Date` | `Created at` | `order-date` |
-| Product | `Item Name` | `Lineitem name` | `product-name` |
-| SKU | `SKU` | `Lineitem sku` | `sku` |
-| Quantity | `Quantity` | `Lineitem quantity` | `quantity` |
-| Price | `Price` | `Lineitem price` | `item-price` |
-| Currency | `Currency` | default `--currency` | `currency` |
-| Fees | processing/transaction/listing | `Taxes` | `amazon-fee` |
-| Shipping | `Shipping` | `Shipping` | `shipping-fee` |
-| Refund | not detected | `Financial Status` | `item-status` |
+## Automation
+
+Weekly email report (requires SMTP env vars):
+
+```bash
+python -m src.scheduler --run-now
+```
+
+Environment variables for alerting/APIs:
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `ALERT_EMAIL`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- `SHOPIFY_STORE`, `SHOPIFY_ACCESS_TOKEN`
+- `ETSY_API_KEY`, `ETSY_SHOP_ID`, `ETSY_ACCESS_TOKEN`
+
+## Custom branding
+
+Edit `config/report.json` to change company name, logo, colors and base currency.
 
 ## Project structure
 
 ```
 ├── src/
-│   ├── schema.py     # unified data model and platform column maps
-│   ├── parser.py     # CSV ingestion
-│   ├── metrics.py    # pure metric functions
-│   ├── charts.py     # matplotlib chart builders
-│   ├── insights.py   # heuristic insight rules
-│   ├── report.py     # HTML/PDF report generation
-│   └── cli.py        # command-line entry point
-├── tests/            # pytest suite
-├── data/samples/     # synthetic CSV samples
-├── app.py            # optional Streamlit UI
+│   ├── schema.py           # unified data model and platform column maps
+│   ├── parser.py           # CSV ingestion + currency conversion
+│   ├── metrics.py          # pure metric functions
+│   ├── charts.py           # matplotlib chart builders
+│   ├── insights.py         # heuristic insight rules
+│   ├── validation.py       # data-quality warnings
+│   ├── history.py          # SQLite persistence
+│   ├── currency.py         # Frankfurter exchange-rate client
+│   ├── config.py           # report branding config
+│   ├── export_excel.py     # Excel export with formulas
+│   ├── report.py           # HTML/PDF report generation
+│   ├── cli.py              # command-line entry point
+│   ├── demo.py             # synthetic demo data generator
+│   ├── scheduler.py        # weekly email scheduler
+│   ├── alerts.py           # email/Telegram alerting
+│   └── api_clients/        # Etsy / Shopify API clients
+├── tests/                  # pytest suite
+├── data/samples/           # synthetic CSV samples
+├── config/report.json      # branding config
+├── app.py                  # Streamlit UI
+├── ROADMAP.md              # public roadmap
 └── pyproject.toml
 ```
 

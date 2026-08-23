@@ -14,7 +14,7 @@ def _active(orders: List[UnifiedOrder]) -> List[UnifiedOrder]:
 
 
 def total_revenue(orders: List[UnifiedOrder]) -> float:
-    return sum(o.revenue for o in _active(orders))
+    return sum(o.effective_revenue for o in _active(orders))
 
 
 def total_units(orders: List[UnifiedOrder]) -> int:
@@ -44,7 +44,7 @@ def refund_rate(orders: List[UnifiedOrder]) -> float:
 def revenue_by_product(orders: List[UnifiedOrder]) -> Dict[str, float]:
     result: Dict[str, float] = defaultdict(float)
     for o in _active(orders):
-        result[o.product_name] += o.revenue
+        result[o.product_name] += o.effective_revenue
     return dict(result)
 
 
@@ -58,7 +58,7 @@ def units_by_product(orders: List[UnifiedOrder]) -> Dict[str, int]:
 def revenue_by_date(orders: List[UnifiedOrder]) -> Dict[date, float]:
     result: Dict[date, float] = defaultdict(float)
     for o in _active(orders):
-        result[o.order_date] += o.revenue
+        result[o.order_date] += o.effective_revenue
     return dict(sorted(result.items()))
 
 
@@ -66,7 +66,7 @@ def revenue_by_country(orders: List[UnifiedOrder]) -> Dict[str, float]:
     result: Dict[str, float] = defaultdict(float)
     for o in _active(orders):
         if o.country:
-            result[o.country] += o.revenue
+            result[o.country] += o.effective_revenue
     return dict(result)
 
 
@@ -79,14 +79,12 @@ def margin_by_product(orders: List[UnifiedOrder]) -> Dict[str, float]:
     cost = defaultdict(float)
     has_cost = False
     for o in _active(orders):
-        revenue[o.product_name] += o.revenue
+        revenue[o.product_name] += o.effective_revenue
         if o.cost_per_unit is not None:
             cost[o.product_name] += o.cost_per_unit * o.quantity
             has_cost = True
         else:
             cost[o.product_name] += o.fees + o.shipping_cost
-    if has_cost:
-        return {name: revenue[name] - cost[name] for name in revenue}
     return {name: revenue[name] - cost[name] for name in revenue}
 
 

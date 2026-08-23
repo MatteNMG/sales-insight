@@ -133,11 +133,148 @@ def refund_spike_insight(
     return []
 
 
+def year_over_year_insight(orders: List[UnifiedOrder]) -> List[Insight]:
+    """Compare revenue in the most recent complete month with the same month last year."""
+    from collections import defaultdict
+
+    by_month: Dict[tuple, float] = defaultdict(float)
+    for o in orders:
+        if o.refund:
+            continue
+        by_month[(o.order_date.year, o.order_date.month)] += o.effective_revenue
+
+    if not by_month:
+        return []
+
+    latest_year, latest_month = max(by_month)
+    current = by_month[(latest_year, latest_month)]
+    prev_key = (latest_year - 1, latest_month)
+    if prev_key not in by_month or by_month[prev_key] == 0:
+        return []
+    previous = by_month[prev_key]
+    change = (current - previous) / previous
+    direction = "up" if change >= 0 else "down"
+    insights: List[Insight] = [
+        {
+            "type": "yoy_revenue",
+            "severity": "info" if abs(change) < 0.1 else ("positive" if change >= 0 else "warning"),
+            "message": (
+                f"Revenue for {latest_month:02d}/{latest_year} is "
+                f"{abs(change)*100:.0f}% {direction} vs {latest_month:02d}/{latest_year-1}"
+            ),
+        }
+    ]
+    return insights
+
+
+def product_correlation_insight(
+    orders: List[UnifiedOrder],
+    min_support: int = 3,
+) -> List[Insight]:
+    """Find product pairs frequently bought together in the same order."""
+    from collections import Counter
+    from itertools import combinations
+
+    baskets: Dict[str, set] = {}
+    for o in orders:
+        if o.refund:
+            continue
+        baskets.setdefault(o.order_id, set()).add(o.product_name)
+
+    pair_counts: Counter[tuple] = Counter()
+    product_counts: Counter[str] = Counter()
+    for products in baskets.values():
+        products = sorted(products)
+        if len(products) < 2:
+            continue
+        for p in products:
+            product_counts[p] += 1
+        for a, b in combinations(products, 2):
+            pair_counts[(a, b)] += 1
+
+    insights: List[Insight] = []
+    for (a, b), count in pair_counts.most_common(5):
+        if count < min_support:
+            break
+        confidence_a = count / product_counts[a] if product_counts[a] else 0.0
+        confidence_b = count / product_counts[b] if product_counts[b] else 0.0
+        lift = (count * len(baskets)) / (product_counts[a] * product_counts[b]) if product_counts[a] and product_counts[b] else 0.0
+        if lift >= 1.2 and min(confidence_a, confidence_b) >= 0.25:
+            insights.append(
+                {
+                    "type": "product_bundle",
+                    "severity": "positive",
+                    "message": f"'{a}' and '{b}' are bought together in {count} orders (lift {lift:.1f}) — consider a bundle",
+                }
+            )
+    return insights
+
+
+def stock_forecast_insight(
+    orders: List[UnifiedOrder],
+    days_window: int = 30,
+    threshold_days: float = 14.0,
+) -> List[Insight]:
+    """Improved stock runout using a linear trend over the recent window."""
+    import statistics
+    from datetime import timedelta
+
+    if not orders:
+        return []
+    latest = max(o.order_date for o in orders)
+    cutoff = latest - timedelta(days=days_window)
+
+    stocks: Dict[str, Optional[int]] = {}
+    for o in orders:
+        if o.stock_quantity is not None:
+            stocks[o.product_name] = o.stock_quantity
+    if not stocks:
+        return []
+
+    daily_sales: Dict[str, List[tuple]] = {name: [] for name in stocks}
+    for o in orders:
+        if o.refund or o.product_name not in stocks:
+            continue
+        if o.order_date >= cutoff:
+            daily_sales[o.product_name].append((o.order_date, o.quantity))
+
+    insights: List[Insight] = []
+    for name, stock in stocks.items():
+        if stock is None or stock <= 0:
+            continue
+        points = sorted(daily_sales[name])
+        if len(points) < 2:
+            continue
+        x = [(d - cutoff).days for d, _ in points]
+        y = [q for _, q in points]
+        try:
+            import numpy as np
+            slope, intercept = np.polyfit(x, y, 1)
+            velocity = max(float(slope), 0.0)
+        except Exception:
+            velocity = statistics.mean(y) if y else 0.0
+        if velocity <= 0:
+            continue
+        days_left = stock / velocity
+        if days_left <= threshold_days:
+            insights.append(
+                {
+                    "type": "stock_forecast",
+                    "severity": "critical" if days_left <= 7 else "warning",
+                    "message": f"{name} stock may run out in {days_left:.0f} days at current velocity",
+                }
+            )
+    return insights
+
+
 def generate_insights(orders: List[UnifiedOrder]) -> List[Insight]:
     """Return all heuristic insights."""
     insights: List[Insight] = []
     insights.extend(sales_drop_insight(orders))
     insights.extend(low_margin_insight(orders))
     insights.extend(stock_runout_insight(orders))
+    insights.extend(stock_forecast_insight(orders))
     insights.extend(refund_spike_insight(orders))
+    insights.extend(year_over_year_insight(orders))
+    insights.extend(product_correlation_insight(orders))
     return insights

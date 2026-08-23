@@ -7,6 +7,7 @@ from typing import Iterable, List, Optional, Sequence, Union
 
 import pandas as pd
 
+from .currency import convert
 from .schema import (
     PLATFORM_SCHEMA,
     UnifiedOrder,
@@ -30,6 +31,7 @@ def normalize(
     df: pd.DataFrame,
     platform: Optional[str] = None,
     default_currency: str = "EUR",
+    base_currency: str = "EUR",
 ) -> List[UnifiedOrder]:
     """Convert a platform DataFrame into a list of UnifiedOrder objects."""
     if platform is None:
@@ -40,7 +42,7 @@ def normalize(
     mapping = PLATFORM_SCHEMA[platform]
     rows: List[UnifiedOrder] = []
     for _, row in df.iterrows():
-        order = _row_to_order(row, platform, mapping, default_currency)
+        order = _row_to_order(row, platform, mapping, default_currency, base_currency)
         rows.append(order)
     return rows
 
@@ -50,6 +52,7 @@ def _row_to_order(
     platform: str,
     mapping: dict,
     default_currency: str,
+    base_currency: str = "EUR",
 ) -> UnifiedOrder:
     def get(key: str):
         col = mapping.get(key)
@@ -62,6 +65,7 @@ def _row_to_order(
     quantity = _coerce_quantity(get("quantity"))
     unit_price = _coerce_money(get("unit_price"))
     revenue = quantity * unit_price
+    order_date = _normalize_date(get("order_date"))
 
     currency = get("currency")
     if currency is None or (isinstance(currency, float) and pd.isna(currency)):
@@ -84,10 +88,13 @@ def _row_to_order(
     country = get("country")
     country = str(country).strip() if country is not None else None
 
+    unit_price_base = convert(unit_price, currency, base_currency, order_date)
+    revenue_base = convert(revenue, currency, base_currency, order_date)
+
     return UnifiedOrder(
         platform=platform,
         order_id=str(get("order_id")),
-        order_date=_normalize_date(get("order_date")),
+        order_date=order_date,
         product_name=str(get("product_name")),
         sku=str(get("sku")),
         quantity=quantity,
@@ -99,6 +106,9 @@ def _row_to_order(
         shipping_cost=shipping,
         refund=refund,
         country=country if country and country.lower() != "nan" else None,
+        base_currency=base_currency,
+        unit_price_base=unit_price_base,
+        revenue_base=revenue_base,
     )
 
 
@@ -106,9 +116,17 @@ def load_files(
     paths: Iterable[PathLike],
     platform: Optional[str] = None,
     default_currency: str = "EUR",
+    base_currency: str = "EUR",
 ) -> List[UnifiedOrder]:
     orders: List[UnifiedOrder] = []
     for path in paths:
         df = read_csv(path)
-        orders.extend(normalize(df, platform=platform, default_currency=default_currency))
+        orders.extend(
+            normalize(
+                df,
+                platform=platform,
+                default_currency=default_currency,
+                base_currency=base_currency,
+            )
+        )
     return orders

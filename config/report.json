@@ -1,0 +1,10 @@
+{
+  "company_name": "Your Shop",
+  "logo_path": null,
+  "primary_color": "#4a90d9",
+  "accent_color": "#f0ad4e",
+  "text_color": "#222222",
+  "bg_color": "#ffffff",
+  "base_currency": "EUR",
+  "date_format": "%Y-%m-%d"
+}

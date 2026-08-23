@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — 2026-08-23
+
+### Added
+- Multi-currency conversion using the free Frankfurter API with local file cache.
+- Data validation module that flags zero/negative prices, negative margins, missing dates and duplicates.
+- Persistent SQLite history (`history.py`) for cross-report trend analysis.
+- Advanced insights: year-over-year revenue comparison, product correlation / bundle suggestions, improved stock-runout forecast.
+- Excel export with live formulas in `src/export_excel.py`.
+- Customizable report branding via `config/report.json`.
+- Streamlit dashboard with demo mode, executive summary tab and download buttons.
+- Automation scaffolding: Shopify Admin API client, email/Telegram alerts, weekly email scheduler.
+- `ROADMAP.md` and updated `README.md`.
+
 ## 0.1.0 — 2026-08-23
 
 ### Added
