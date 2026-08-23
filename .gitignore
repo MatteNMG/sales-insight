@@ -8,6 +8,7 @@ venv/
 *.html
 *.pdf
 *.xlsx
+!templates/*.html
 data/cache/
 data/history.db
 *.db
