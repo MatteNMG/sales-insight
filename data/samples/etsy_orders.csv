@@ -1,0 +1,16 @@
+Sale Date,Order ID,Item Name,Quantity,Price,Shipping,Currency,Delivery Country,SKU,Card Processing Fees,Transaction Fees,Listing Fees
+2025-01-05,ET-1001,Handmade Silver Ring,2,25.00,4.50,EUR,Italy,RING-01,1.20,1.50,0.40
+2025-01-07,ET-1002,Personalized Leather Wallet,1,45.00,5.00,EUR,France,WALL-02,2.10,2.70,0.60
+2025-01-08,ET-1003,Handmade Silver Ring,1,25.00,4.50,EUR,Germany,RING-01,0.75,1.50,0.40
+2025-01-12,ET-1004,Macrame Plant Hanger,3,18.00,6.50,EUR,Spain,PLNT-03,2.40,3.24,0.60
+2025-01-15,ET-1005,Custom Dog Bandana,2,12.00,3.50,EUR,Italy,DOG-04,1.00,1.44,0.50
+2025-01-18,ET-1006,Personalized Leather Wallet,1,45.00,5.00,EUR,France,WALL-02,2.10,2.70,0.60
+2025-01-20,ET-1007,Handmade Silver Ring,2,25.00,4.50,EUR,Italy,RING-01,1.20,1.50,0.40
+2025-01-22,ET-1008,Macrame Plant Hanger,1,18.00,4.00,EUR,Germany,PLNT-03,0.80,1.62,0.30
+2025-01-25,ET-1009,Custom Dog Bandana,4,12.00,5.50,EUR,Spain,DOG-04,1.80,2.88,0.80
+2025-01-28,ET-1010,Personalized Leather Wallet,1,45.00,5.00,EUR,France,WALL-02,2.10,2.70,0.60
+2025-02-01,ET-1011,Handmade Silver Ring,1,25.00,4.50,EUR,Italy,RING-01,0.75,1.50,0.40
+2025-02-03,ET-1012,Macrame Plant Hanger,2,18.00,5.00,EUR,Spain,PLNT-03,1.60,2.16,0.40
+2025-02-06,ET-1013,Custom Dog Bandana,2,12.00,3.50,EUR,Italy,DOG-04,1.00,1.44,0.50
+2025-02-09,ET-1014,Personalized Leather Wallet,1,45.00,5.00,EUR,France,WALL-02,2.10,2.70,0.60
+2025-02-12,ET-1015,Handmade Silver Ring,3,25.00,6.50,EUR,Germany,RING-01,1.80,2.25,0.60

@@ -1,0 +1,16 @@
+order-id,order-date,product-name,sku,quantity,item-price,currency,item-status,ship-country,amazon-fee,shipping-fee
+AZ-2001,2025-01-03,Bluetooth Sleep Mask,SLEP-201,2,29.99,EUR,Shipped,IT,5.40,4.50
+AZ-2002,2025-01-06,Portable Phone Stand,STND-202,1,14.99,EUR,Shipped,FR,2.70,3.50
+AZ-2003,2025-01-10,Bluetooth Sleep Mask,SLEP-201,1,29.99,EUR,Shipped,DE,5.40,4.50
+AZ-2004,2025-01-13,Portable Phone Stand,STND-202,3,14.99,EUR,Shipped,IT,8.10,5.50
+AZ-2005,2025-01-16,Smart Key Finder,KEYF-203,2,19.99,EUR,Shipped,ES,7.20,4.50
+AZ-2006,2025-01-18,Bluetooth Sleep Mask,SLEP-201,1,29.99,EUR,Cancelled,FR,0.00,0.00
+AZ-2007,2025-01-23,Portable Phone Stand,STND-202,2,14.99,EUR,Shipped,DE,5.40,4.50
+AZ-2008,2025-01-25,Smart Key Finder,KEYF-203,1,19.99,EUR,Shipped,IT,3.60,3.50
+AZ-2009,2025-01-27,Bluetooth Sleep Mask,SLEP-201,2,29.99,EUR,Shipped,FR,5.40,4.50
+AZ-2010,2025-01-30,Portable Phone Stand,STND-202,1,14.99,EUR,Shipped,ES,2.70,3.50
+AZ-2011,2025-02-04,Smart Key Finder,KEYF-203,3,19.99,EUR,Shipped,IT,10.80,6.50
+AZ-2012,2025-02-07,Bluetooth Sleep Mask,SLEP-201,1,29.99,EUR,Shipped,FR,5.40,4.50
+AZ-2013,2025-02-10,Portable Phone Stand,STND-202,2,14.99,EUR,Shipped,DE,5.40,4.50
+AZ-2014,2025-02-13,Smart Key Finder,KEYF-203,1,19.99,EUR,Shipped,ES,3.60,3.50
+AZ-2015,2025-02-15,Bluetooth Sleep Mask,SLEP-201,2,29.99,EUR,Shipped,IT,5.40,4.50
