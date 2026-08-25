@@ -53,9 +53,10 @@ def check_csv(
     if expected_platform and expected_platform not in PLATFORM_SCHEMA:
         return {"ok": False, "error": "Please select Etsy, Shopify, or Amazon."}
     if expected_platform and detected_platform and detected_platform != expected_platform:
+        article = "an" if detected_platform in {"etsy", "amazon"} else "a"
         return {
             "ok": False,
-            "error": f"This looks like a {PLATFORM_LABELS[detected_platform]} CSV, not {PLATFORM_LABELS[expected_platform]} — change the selected platform.",
+            "error": f"This looks like {article} {PLATFORM_LABELS[detected_platform]} CSV, not {PLATFORM_LABELS[expected_platform]} — change the selected platform.",
             "platform": detected_platform,
         }
     if not platform:
