@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
+from webapp import app
 from src.config import ReportConfig
 from src.currency import convert, get_rate
 from src.history import init_db, load_orders, upsert_orders
@@ -58,3 +59,29 @@ def test_report_config_default():
     cfg = ReportConfig.default()
     assert cfg.base_currency == "EUR"
     assert cfg.primary_color == "#4a90d9"
+
+
+def test_health_check():
+    with app.test_client() as client:
+        response = client.get("/health")
+    assert response.status_code == 200
+    assert response.get_json() == {"status": "ok"}
+
+
+def test_demo_and_exports(tmp_path):
+    app.config.update(DB_PATH=tmp_path / "history.db", UPLOAD_FOLDER=tmp_path / "uploads")
+    app.config["UPLOAD_FOLDER"].mkdir()
+    with app.test_client() as client:
+        demo_response = client.get("/api/demo")
+        assert demo_response.status_code == 200
+        assert demo_response.get_json()["summary"]["orders"] > 0
+
+        for report_format, mimetype in (
+            ("html", "text/html"),
+            ("pdf", "application/pdf"),
+            ("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ):
+            response = client.get(f"/api/export/{report_format}")
+            assert response.status_code == 200
+            assert response.mimetype == mimetype
+            assert response.data

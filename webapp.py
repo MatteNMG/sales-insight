@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import tempfile
 import traceback
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -32,8 +33,11 @@ from src.report import render_executive_summary, render_html, write_pdf
 from src.validation import validate_orders
 
 app = Flask(__name__)
-app.config["DB_PATH"] = Path(os.getenv("SALES_INSIGHT_DB", "data/web_history.db"))
-app.config["UPLOAD_FOLDER"] = Path("data/uploads")
+is_production = os.getenv("FLASK_ENV") == "production" or bool(os.getenv("RAILWAY_ENVIRONMENT"))
+runtime_dir = Path(tempfile.gettempdir()) / "sales-insight" if is_production else Path("data")
+app.config["DB_PATH"] = Path(os.getenv("SALES_INSIGHT_DB", runtime_dir / "web_history.db"))
+app.config["UPLOAD_FOLDER"] = runtime_dir / "uploads"
+app.config["DEBUG"] = False
 app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
 
 
@@ -103,6 +107,11 @@ def _payload(orders: List[Any], include_orders: bool = True) -> Dict[str, Any]:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/api/demo")
@@ -249,4 +258,4 @@ def export(format: str):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=False)
