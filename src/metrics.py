@@ -62,11 +62,32 @@ def revenue_by_date(orders: List[UnifiedOrder]) -> Dict[date, float]:
     return dict(sorted(result.items()))
 
 
+COUNTRY_NAMES = {
+    "AT": "Austria", "AU": "Australia", "BE": "Belgium", "CA": "Canada",
+    "CH": "Switzerland", "DE": "Germany", "DK": "Denmark", "ES": "Spain",
+    "FI": "Finland", "FR": "France", "GB": "United Kingdom", "GR": "Greece",
+    "IE": "Ireland", "IT": "Italy", "JP": "Japan", "NL": "Netherlands",
+    "NO": "Norway", "NZ": "New Zealand", "PL": "Poland", "PT": "Portugal",
+    "SE": "Sweden", "US": "United States",
+}
+
+
+def canonical_country(country: str) -> str:
+    value = country.strip()
+    code = value.upper()
+    if code in COUNTRY_NAMES:
+        return COUNTRY_NAMES[code]
+    for name in COUNTRY_NAMES.values():
+        if value.casefold() == name.casefold():
+            return name
+    return value
+
+
 def revenue_by_country(orders: List[UnifiedOrder]) -> Dict[str, float]:
     result: Dict[str, float] = defaultdict(float)
     for o in _active(orders):
         if o.country:
-            result[o.country] += o.effective_revenue
+            result[canonical_country(o.country)] += o.effective_revenue
     return dict(result)
 
 

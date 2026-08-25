@@ -124,15 +124,30 @@ def demo():
 @app.route("/api/check", methods=["POST"])
 def check():
     if "file" not in request.files:
-        return jsonify({"ok": False, "error": "No file provided"}), 400
+        return jsonify({"ok": False, "error": "Choose a CSV file to continue."}), 400
     file = request.files["file"]
     if file.filename == "":
-        return jsonify({"ok": False, "error": "Empty filename"}), 400
-    try:
-        result = check_csv(io.StringIO(file.stream.read().decode("utf-8")))
-        return jsonify(result)
-    except Exception as exc:
-        return jsonify({"ok": False, "error": f"Unexpected error: {exc}"}), 500
+        return jsonify({"ok": False, "error": "Choose a CSV file to continue."}), 400
+    platform = request.form.get("platform") or None
+    result = check_csv(io.BytesIO(file.stream.read()), expected_platform=platform)
+    return jsonify(result)
+
+
+@app.route("/samples/<platform>.csv")
+def sample_csv(platform: str):
+    sample_files = {
+        "etsy": "etsy_orders.csv",
+        "shopify": "shopify_orders.csv",
+        "amazon": "amazon_orders.csv",
+    }
+    if platform not in sample_files:
+        return jsonify({"error": "Sample not found."}), 404
+    return send_file(
+        Path("data/samples") / sample_files[platform],
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=sample_files[platform],
+    )
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -146,21 +161,21 @@ def upload():
     platform = request.form.get("platform") or None
     currency = request.form.get("currency", "EUR")
     base = request.form.get("base_currency", DEFAULT_BASE_CURRENCY)
+    content = file.stream.read()
+    validation = check_csv(io.BytesIO(content), expected_platform=platform)
+    if not validation["ok"]:
+        return jsonify({"error": validation["error"]}), 400
 
     try:
-        df = read_csv(io.StringIO(file.stream.read().decode("utf-8")))
-    except UnicodeDecodeError as exc:
-        return jsonify({"error": f"Encoding error: {exc}. Save the file as UTF-8 and retry."}), 400
-    except Exception as exc:
-        return jsonify({"error": f"Could not read CSV: {exc}"}), 400
-
-    try:
-        orders = normalize(df, platform=platform, default_currency=currency, base_currency=base)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    except Exception as exc:
-        traceback.print_exc()
-        return jsonify({"error": f"Failed to normalize CSV: {exc}"}), 400
+        df = read_csv(io.BytesIO(content))
+        orders = normalize(
+            df,
+            platform=platform or validation["platform"],
+            default_currency=currency,
+            base_currency=base,
+        )
+    except Exception:
+        return jsonify({"error": "We could not process this CSV — verify the file format and try again."}), 400
 
     upsert_orders(orders, app.config["DB_PATH"])
     return jsonify(_payload(orders))

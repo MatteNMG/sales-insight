@@ -65,8 +65,15 @@ def country_chart(orders: List[UnifiedOrder]) -> str:
         return _to_base64(fig)
     labels = list(data.keys())
     values = list(data.values())
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+    fig, ax = plt.subplots(figsize=(7, 5))
+    wedges, _, _ = ax.pie(
+        values,
+        labels=None,
+        autopct=lambda percentage: f"{percentage:.1f}%" if percentage >= 3 else "",
+        pctdistance=0.72,
+        startangle=90,
+    )
+    ax.legend(wedges, labels, title="Country", loc="center left", bbox_to_anchor=(1, 0.5))
     ax.set_title("Revenue by country")
     fig.tight_layout()
     return _to_base64(fig)

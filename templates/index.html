@@ -14,7 +14,7 @@
 
 <div class="privacy-banner" id="privacy-banner">
   <div>
-    <strong>Your data stays local.</strong> CSV files are processed in your browser by this local server; nothing is uploaded to the cloud. Currency conversion uses the free Frankfurter API (rates only, no sales data).
+    <strong>Your sales data stays private.</strong> CSV files are processed only to generate your report and are not shared with third parties. Currency conversion sends currency codes and dates—not sales data—to the Frankfurter rates API.
   </div>
   <button id="btn-dismiss-privacy" aria-label="Dismiss">Got it</button>
 </div>
@@ -48,7 +48,13 @@
       <strong>Drop a CSV export here</strong>, or click to browse
       <input type="file" name="file" id="file-input" accept=".csv" style="display:none">
     </div>
-    <div class="upload-meta" id="file-check" style="display:none; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:6px; font-size:13px"></div>
+    <div class="upload-meta" id="file-check" role="status" aria-live="polite" style="display:none; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:6px; font-size:13px"></div>
+    <div class="sample-links" aria-label="Sample CSV downloads">
+      Expected format:
+      <a href="/samples/etsy.csv">Etsy sample</a>
+      <a href="/samples/shopify.csv">Shopify sample</a>
+      <a href="/samples/amazon.csv">Amazon sample</a>
+    </div>
     <div class="filters" style="margin-top:12px">
       <select name="platform" id="platform">
         <option value="">Auto-detect platform</option>
@@ -58,6 +64,7 @@
       </select>
       <input type="text" name="currency" id="currency" placeholder="Default currency (e.g. EUR)" value="EUR">
       <input type="text" name="base_currency" id="base_currency" placeholder="Base currency" value="EUR">
+      <button type="submit" class="primary" id="btn-upload" disabled>Process CSV</button>
     </div>
   </form>
   <div class="loading" id="upload-loading"><div class="spinner"></div>Processing…</div>
@@ -110,7 +117,7 @@
   <h2>Coming soon</h2>
   <p style="color:var(--muted); font-size:13px; line-height:1.6">
     <span class="wip-badge">Work in progress</span>
-    Direct Etsy/Shopify API sync, scheduled email reports, Telegram/email alerts and Google Sheets export require credentials. Set the environment variables in <code>README.md</code> to enable them.
+    Direct Etsy/Shopify API sync, scheduled reports and messaging alerts are optional future integrations. CSV upload, demo mode and all report exports work without credentials.
   </p>
 </div>
 
@@ -148,7 +155,7 @@
 
 <footer>
   <span>sales-insight v0.2</span>
-  <span>generated locally</span>
+  <span>private report generation</span>
 </footer>
 
 </div>

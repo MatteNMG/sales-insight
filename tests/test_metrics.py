@@ -8,6 +8,7 @@ from src.metrics import (
     average_order_value,
     flop_products,
     refund_rate,
+    revenue_by_country,
     revenue_by_date,
     summary,
     top_products,
@@ -60,3 +61,10 @@ def test_summary_keys():
     s = summary(orders)
     assert s["total_revenue"] == 60.0
     assert s["average_order_value"] == pytest.approx(30.0)
+
+
+def test_revenue_by_country_merges_codes_and_names():
+    orders = _orders()[:2]
+    orders[0].country = "IT"
+    orders[1].country = "Italy"
+    assert revenue_by_country(orders) == {"Italy": 30.0}

@@ -85,6 +85,8 @@ h2{font-family:'Fraunces',serif; font-weight:500; font-size:16px; margin:0 0 16p
 .upload:hover{border-color:var(--ink); color:var(--ink)}
 .upload.dragover{border-color:var(--pine); background:rgba(47,111,94,.08)}
 .upload-meta{font-size:13px; color:var(--muted); line-height:1.5}
+.sample-links{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; color:var(--muted); font-size:12px}
+.sample-links a{color:var(--pine); font-weight:600; text-underline-offset:3px}
 
 .empty-state{text-align:center; padding:48px 24px; color:var(--muted)}
 .empty-state h3{font-family:'Fraunces',serif; font-weight:500; color:var(--ink); margin-bottom:8px}

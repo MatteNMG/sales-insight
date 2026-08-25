@@ -3,6 +3,7 @@ const $$ = (s) => document.querySelectorAll(s);
 
 let currentSummary = null;
 let currentProduct = null;
+let selectedFile = null;
 
 function formatMoney(n) {
   return '€' + Number(n || 0).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -102,24 +103,33 @@ async function loadDemo() {
 async function checkFile(file) {
   const form = new FormData();
   form.append('file', file);
+  form.append('platform', $('#platform').value);
+  const box = $('#file-check');
+  const button = $('#btn-upload');
+  button.disabled = true;
   try {
     const data = await fetchJson('/api/check', {method: 'POST', body: form});
-    const box = $('#file-check');
     if (data.ok) {
-      box.innerHTML = `<strong>${data.platform}</strong> detected · missing fields: ${data.missing_fields.length ? data.missing_fields.join(', ') : 'none'} · preview rows: ${data.row_count_preview}`;
+      box.textContent = `${file.name}: ${data.platform} format detected · ${data.row_count_preview} preview rows ready.`;
       box.style.color = 'var(--pine)';
+      button.disabled = false;
     } else {
-      box.innerHTML = `<strong>Format issue:</strong> ${data.error}`;
+      box.textContent = data.error;
       box.style.color = 'var(--brick)';
     }
     box.style.display = 'block';
+    return data.ok;
   } catch (e) {
-    showError('Format check failed: ' + e.message);
+    box.textContent = e.message;
+    box.style.color = 'var(--brick)';
+    box.style.display = 'block';
+    return false;
   }
 }
 
 async function uploadFile(file) {
   clearError();
+  if (!file || !await checkFile(file)) return;
   const form = new FormData();
   form.append('file', file);
   form.append('platform', $('#platform').value);
@@ -216,22 +226,26 @@ function toggleTheme() {
 function initUpload() {
   const dropzone = $('#dropzone');
   const input = $('#file-input');
+  const form = $('#upload-form');
   dropzone.addEventListener('click', () => input.click());
-  input.addEventListener('change', () => {
-    if (input.files[0]) {
-      checkFile(input.files[0]);
-      uploadFile(input.files[0]);
-    }
+  input.addEventListener('change', async () => {
+    selectedFile = input.files[0] || null;
+    if (selectedFile) await checkFile(selectedFile);
+  });
+  $('#platform').addEventListener('change', async () => {
+    if (selectedFile) await checkFile(selectedFile);
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await uploadFile(selectedFile);
   });
   dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-  dropzone.addEventListener('drop', (e) => {
+  dropzone.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropzone.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) {
-      checkFile(e.dataTransfer.files[0]);
-      uploadFile(e.dataTransfer.files[0]);
-    }
+    selectedFile = e.dataTransfer.files[0] || null;
+    if (selectedFile) await checkFile(selectedFile);
   });
 }
 

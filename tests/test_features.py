@@ -1,6 +1,7 @@
 """Tests for new features: currency, validation, history, config."""
 
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
@@ -85,3 +86,51 @@ def test_demo_and_exports(tmp_path):
             assert response.status_code == 200
             assert response.mimetype == mimetype
             assert response.data
+
+
+@pytest.mark.parametrize("platform", ["etsy", "shopify", "amazon"])
+def test_sample_csv_download(platform):
+    with app.test_client() as client:
+        response = client.get(f"/samples/{platform}.csv")
+    assert response.status_code == 200
+    assert response.mimetype == "text/csv"
+
+
+@pytest.mark.parametrize("platform", ["etsy", "shopify", "amazon"])
+def test_platform_sample_upload_end_to_end(tmp_path, platform):
+    app.config.update(DB_PATH=tmp_path / "history.db", UPLOAD_FOLDER=tmp_path / "uploads")
+    app.config["UPLOAD_FOLDER"].mkdir()
+    sample = Path("data/samples") / f"{platform}_orders.csv"
+    with app.test_client() as client, sample.open("rb") as csv_file:
+        check_response = client.post(
+            "/api/check",
+            data={"file": (csv_file, sample.name), "platform": platform},
+            content_type="multipart/form-data",
+        )
+        assert check_response.status_code == 200
+        assert check_response.get_json()["ok"] is True
+
+    with app.test_client() as client, sample.open("rb") as csv_file:
+        upload_response = client.post(
+            "/api/upload",
+            data={"file": (csv_file, sample.name), "platform": platform},
+            content_type="multipart/form-data",
+        )
+        assert upload_response.status_code == 200
+        assert upload_response.get_json()["summary"]["orders"] > 0
+        assert client.get("/api/export/html").status_code == 200
+        assert client.get("/api/export/pdf").status_code == 200
+        assert client.get("/api/export/xlsx").status_code == 200
+
+
+def test_upload_returns_actionable_error_inline_payload(tmp_path):
+    app.config.update(DB_PATH=tmp_path / "history.db", UPLOAD_FOLDER=tmp_path / "uploads")
+    app.config["UPLOAD_FOLDER"].mkdir()
+    with app.test_client() as client:
+        response = client.post(
+            "/api/upload",
+            data={"file": (BytesIO(b"Order ID,Item Name\n1,Ring"), "broken.csv"), "platform": "etsy"},
+            content_type="multipart/form-data",
+        )
+    assert response.status_code == 400
+    assert response.get_json()["error"].startswith("Missing column 'Sale Date'")

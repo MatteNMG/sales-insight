@@ -1,10 +1,11 @@
 """Tests for CSV normalization."""
 
-from io import StringIO
+from io import BytesIO, StringIO
 
 import pandas as pd
 import pytest
 
+from src.csv_checker import check_csv
 from src.parser import normalize, read_csv
 from src.schema import UnifiedOrder, infer_platform
 
@@ -60,3 +61,47 @@ def test_revenue_calculation():
     df = read_csv(StringIO(AMAZON_CSV))
     orders = normalize(df)
     assert orders[0].revenue == pytest.approx(59.98)
+
+
+PLATFORM_CSVS = {
+    "etsy": ETSY_CSV,
+    "shopify": SHOPIFY_CSV,
+    "amazon": AMAZON_CSV,
+}
+
+
+@pytest.mark.parametrize("platform,csv_text", PLATFORM_CSVS.items())
+def test_csv_checker_accepts_platform_samples(platform, csv_text):
+    result = check_csv(BytesIO(csv_text.encode()), expected_platform=platform)
+    assert result["ok"] is True
+    assert result["platform"] == platform
+
+
+@pytest.mark.parametrize("platform,csv_text", PLATFORM_CSVS.items())
+@pytest.mark.parametrize("failure", ["missing", "delimiter", "empty", "encoding"])
+def test_csv_checker_rejects_broken_platform_files(platform, csv_text, failure):
+    if failure == "missing":
+        lines = csv_text.splitlines()
+        header = lines[0].split(",")
+        column = {"etsy": "Sale Date", "shopify": "Created at", "amazon": "order-date"}[platform]
+        index = header.index(column)
+        content = "\n".join(
+            ",".join(value for position, value in enumerate(line.split(",")) if position != index)
+            for line in lines
+        ).encode()
+    elif failure == "delimiter":
+        content = csv_text.replace(",", ";").encode()
+    elif failure == "empty":
+        content = b""
+    else:
+        content = b"\xff\xfe\x00\x81"
+
+    result = check_csv(BytesIO(content), expected_platform=platform)
+    assert result["ok"] is False
+    assert result["error"]
+
+
+def test_csv_checker_rejects_wrong_selected_platform():
+    result = check_csv(BytesIO(ETSY_CSV.encode()), expected_platform="amazon")
+    assert result["ok"] is False
+    assert "Etsy CSV, not Amazon" in result["error"]

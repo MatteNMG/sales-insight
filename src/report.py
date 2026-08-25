@@ -29,33 +29,37 @@ REPORT_TEMPLATE = """<!doctype html>
   <meta charset="utf-8">
   <title>{{ config.company_name }} — Sales Insight Report</title>
   <style>
+    @page { size: A4; margin: 16mm; background: #faf9f5; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 2rem;
-      color: {{ config.text_color }};
-      background: {{ config.bg_color }};
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      color: #1b1a17;
+      background: #faf9f5;
+      font-size: 12px;
     }
-    h1 { border-bottom: 2px solid {{ config.primary_color }}; padding-bottom: .5rem; }
-    h2 { color: {{ config.primary_color }}; }
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
-    .kpi { background: #f7f9fb; border-radius: 8px; padding: 1rem; text-align: center; border-top: 4px solid {{ config.primary_color }}; }
-    .kpi .value { font-size: 1.6rem; font-weight: bold; color: {{ config.primary_color }}; }
-    .kpi .label { font-size: .85rem; color: #666; margin-top: .3rem; }
-    .section { margin: 2rem 0; }
-    .chart { margin: 1rem 0; }
-    .chart img { max-width: 100%; height: auto; border: 1px solid #e3e8ed; border-radius: 8px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    th, td { border: 1px solid #e3e8ed; padding: .5rem; text-align: left; }
-    th { background: #f7f9fb; }
-    .insight { padding: .75rem; border-left: 4px solid {{ config.primary_color }}; background: #f7f9fb; margin: .5rem 0; }
-    .insight.critical { border-color: #d9534f; background: #fff0f0; }
-    .insight.warning { border-color: {{ config.accent_color }}; background: #fff8e6; }
-    .insight.positive { border-color: #5cb85c; background: #f0fff0; }
-    .insight.info { border-color: #5bc0de; background: #f0f9ff; }
-    .warning { padding: .5rem; border-left: 4px solid #d9534f; background: #fff0f0; margin: .25rem 0; }
-    .muted { color: #777; font-size: .9rem; }
-    .header { display: flex; align-items: center; gap: 1rem; }
-    .header img { max-height: 60px; }
+    h1, h2 { font-family: Georgia, serif; font-weight: 500; }
+    h1 { margin: 0; font-size: 25px; letter-spacing: -.02em; }
+    h2 { margin: 0 0 14px; color: #1b1a17; font-size: 17px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 22px 0; border: 1px solid #e3e0d6; border-radius: 8px; overflow: hidden; }
+    .kpi { background: #faf9f5; padding: 16px 10px; text-align: left; }
+    .kpi .value { font-family: monospace; font-size: 19px; color: #1b1a17; }
+    .kpi .label { margin-top: 6px; color: #8c877a; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+    .section { margin: 18px 0; padding: 18px; border: 1px solid #e3e0d6; border-radius: 8px; break-inside: avoid; }
+    .chart { margin: 0; }
+    .chart img { display: block; width: 100%; height: auto; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-family: monospace; }
+    th, td { padding: 9px 0; border-bottom: 1px solid #e3e0d6; text-align: left; }
+    th { color: #8c877a; font-family: sans-serif; font-size: 9px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; }
+    th:last-child, td:last-child { text-align: right; }
+    .insight { margin: 6px 0; padding: 10px 12px; border-left: 3px solid #2f6f5e; background: #f1efe7; }
+    .insight.critical { border-color: #b0433a; background: #fff0f0; }
+    .insight.warning { border-color: #b8872e; background: #fff8e6; }
+    .insight.positive { border-color: #2f6f5e; background: #eef7f4; }
+    .insight.info { border-color: #577590; background: #f0f6f8; }
+    .warning { margin: 5px 0; padding: 9px 11px; border-left: 3px solid #b0433a; background: #fff0f0; }
+    .muted { color: #8c877a; font-size: 10px; }
+    .header { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid #e3e0d6; }
+    .header img { max-height: 52px; }
   </style>
 </head>
 <body>

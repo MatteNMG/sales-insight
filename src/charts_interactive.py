@@ -61,7 +61,19 @@ def country_chart(orders: List[UnifiedOrder]) -> str:
         values=list(data.values()),
         title="Revenue by country",
     )
-    fig.update_layout(margin=dict(l=40, r=40, t=50, b=40), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+    fig.update_traces(
+        textposition="inside",
+        textinfo="percent",
+        hovertemplate="%{label}<br>Revenue: %{value:,.2f}<br>%{percent}<extra></extra>",
+    )
+    fig.update_layout(
+        margin=dict(l=40, r=40, t=50, b=40),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        uniformtext_minsize=11,
+        uniformtext_mode="hide",
+        legend_title_text="Country",
+    )
     return _to_json(fig)
 
 
