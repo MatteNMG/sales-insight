@@ -8,8 +8,11 @@ from src.insights import (
     cross_platform_performance_insight,
     fee_anomaly_insight,
     low_margin_insight,
+    price_scenario,
+    product_correlation_insight,
     sales_drop_insight,
     stock_runout_insight,
+    year_over_year_insight,
 )
 from src.metrics import (
     average_order_value,
@@ -119,3 +122,41 @@ def test_fee_anomaly_compares_recent_period():
         orders.append(_daily_order(day, fees=15.0 if offset >= 30 else 5.0))
     insight = fee_anomaly_insight(orders)[0]
     assert "5.0% to 15.0%" in insight["message"]
+
+
+def test_price_scenario_requires_and_uses_price_history():
+    orders = []
+    for offset in range(30):
+        price = (10.0, 12.0, 14.0)[offset % 3]
+        orders.append(_daily_order(date(2025, 1, 1) + timedelta(days=offset), revenue=price))
+    scenario = price_scenario(orders, "Ring", 10)
+    assert scenario is not None
+    assert scenario["confidence"] in {"low", "medium"}
+    assert "traffic" in scenario["caveat"]
+
+
+def test_yoy_includes_event_context():
+    current = _daily_order(date(2025, 5, 1), revenue=120.0)
+    current.event_note = "Mother's Day promotion"
+    previous = _daily_order(date(2024, 5, 1), revenue=100.0)
+    message = year_over_year_insight([previous, current])[0]["message"]
+    assert "Mother's Day promotion" in message
+
+
+def test_bundle_uses_real_co_purchase_orders():
+    orders = []
+    for index in range(3):
+        first = _daily_order(date(2025, 1, index + 1))
+        first.order_id = f"B{index}"
+        second = _daily_order(date(2025, 1, index + 1))
+        second.order_id = f"B{index}"
+        second.product_name = "Wallet"
+        second.sku = "W1"
+        orders.extend([first, second])
+        unrelated = _daily_order(date(2025, 1, index + 1))
+        unrelated.order_id = f"U{index}"
+        unrelated.product_name = "Vase"
+        unrelated.sku = "V1"
+        orders.append(unrelated)
+    insight = product_correlation_insight(orders)[0]
+    assert "Real-order pattern" in insight["message"]

@@ -20,7 +20,7 @@ from src.demo import generate_demo_orders
 from src.export_excel import export_excel
 from src.feedback import list_feedback, save_feedback
 from src.history import load_orders, upsert_orders
-from src.insights import generate_insights
+from src.insights import generate_insights, price_scenario
 from src.metrics import (
     average_order_value,
     revenue_by_date,
@@ -177,6 +177,7 @@ def upload():
             default_currency=currency,
             base_currency=base,
             product_overrides=report_config.extra.get("product_overrides", {}),
+            events=report_config.extra.get("events", []),
         )
     except Exception:
         return jsonify({"error": "We could not process this CSV — verify the file format and try again."}), 400
@@ -232,6 +233,22 @@ def history():
         if r["rows"]
     ]
     return jsonify({"batches": batches})
+
+
+@app.route("/api/price-scenario", methods=["POST"])
+def simulate_price():
+    data = request.get_json(silent=True) or {}
+    product = str(data.get("product", "")).strip()
+    try:
+        change = float(data.get("price_change_percent", 10))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Enter a valid price change percentage."}), 400
+    if not product or not -30 <= change <= 30:
+        return jsonify({"error": "Select a product and use a price change between -30% and 30%."}), 400
+    scenario = price_scenario(_orders_from_db(), product, change)
+    if not scenario:
+        return jsonify({"error": "Not enough price history yet. This requires at least 20 sales across 3 distinct prices."}), 400
+    return jsonify(scenario)
 
 
 @app.route("/api/product/<path:product_name>/trend")

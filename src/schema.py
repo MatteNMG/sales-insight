@@ -31,6 +31,7 @@ class UnifiedOrder:
     base_currency: str = "EUR"
     unit_price_base: Optional[float] = None
     revenue_base: Optional[float] = None
+    event_note: Optional[str] = None
 
     @property
     def effective_revenue(self) -> float:
@@ -67,6 +68,7 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "country": "Delivery Country",
         "cost_per_unit": "cost_per_unit",
         "stock_quantity": "stock_quantity",
+        "event_note": "event_note",
     },
     "shopify": {
         "order_id": "Name",
@@ -82,6 +84,7 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "country": "Shipping Country",
         "cost_per_unit": "cost_per_unit",
         "stock_quantity": "stock_quantity",
+        "event_note": "event_note",
     },
     "amazon": {
         "order_id": "order-id",
@@ -97,6 +100,7 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "country": "ship-country",
         "cost_per_unit": "cost_per_unit",
         "stock_quantity": "stock_quantity",
+        "event_note": "event_note",
     },
 }
 

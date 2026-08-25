@@ -63,6 +63,38 @@ function renderProducts(products) {
   });
 }
 
+function renderScenarioProducts(products) {
+  const select = $('#scenario-product');
+  select.innerHTML = '';
+  products.forEach(product => {
+    const option = document.createElement('option');
+    option.value = product.name;
+    option.textContent = product.name;
+    select.appendChild(option);
+  });
+  $('#scenario-section').style.display = products.length ? 'block' : 'none';
+}
+
+async function runPriceScenario(event) {
+  event.preventDefault();
+  const result = $('#scenario-result');
+  try {
+    const data = await fetchJson('/api/price-scenario', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        product: $('#scenario-product').value,
+        price_change_percent: Number($('#scenario-change').value),
+      }),
+    });
+    result.textContent = `Projected historical-period revenue: ${formatMoney(data.projected_revenue)} versus ${formatMoney(data.current_revenue)} · ${data.confidence} confidence. ${data.caveat}`;
+    result.style.color = 'var(--pine)';
+  } catch (error) {
+    result.textContent = error.message;
+    result.style.color = 'var(--brick)';
+  }
+}
+
 function renderInsights(insights) {
   const section = $('#insights-section');
   const body = $('#insights-body');
@@ -92,6 +124,7 @@ function updateView(payload) {
   renderSummary(payload.summary);
   renderCharts(payload.charts);
   renderProducts(payload.summary.top_products);
+  renderScenarioProducts(payload.summary.top_products);
   renderInsights(payload.insights);
   showSections();
 }
@@ -342,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initUpload();
   initPrivacyBanner();
   initFeedback();
+  $('#scenario-form').addEventListener('submit', runPriceScenario);
   $('#btn-demo').addEventListener('click', loadDemo);
   $('#btn-theme').addEventListener('click', toggleTheme);
   $('#btn-apply-filters').addEventListener('click', applyFilters);

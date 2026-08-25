@@ -33,6 +33,7 @@ def normalize(
     default_currency: str = "EUR",
     base_currency: str = "EUR",
     product_overrides: Optional[dict] = None,
+    events: Optional[list] = None,
 ) -> List[UnifiedOrder]:
     """Convert a platform DataFrame into a list of UnifiedOrder objects."""
     if platform is None:
@@ -49,6 +50,14 @@ def normalize(
             order.cost_per_unit = _coerce_money(override["cost_per_unit"])
         if order.stock_quantity is None and override.get("stock_quantity") is not None:
             order.stock_quantity = _coerce_quantity(override["stock_quantity"])
+        if not order.event_note:
+            for event in events or []:
+                start = _normalize_date(event.get("start"))
+                end = _normalize_date(event.get("end", event.get("start")))
+                skus = event.get("skus") or []
+                if start <= order.order_date <= end and (not skus or order.sku in skus):
+                    order.event_note = str(event.get("note", "")).strip() or None
+                    break
         rows.append(order)
     return rows
 
@@ -82,6 +91,8 @@ def _row_to_order(
     fees = _coerce_money(get("fees"))
     cost_value = get("cost_per_unit")
     stock_value = get("stock_quantity")
+    event_value = get("event_note")
+    event_note = str(event_value).strip() if event_value is not None and not pd.isna(event_value) else None
     cost_per_unit = _coerce_money(cost_value) if cost_value is not None and not pd.isna(cost_value) else None
     stock_quantity = _coerce_quantity(stock_value) if stock_value is not None and not pd.isna(stock_value) else None
 
@@ -120,6 +131,7 @@ def _row_to_order(
         base_currency=base_currency,
         unit_price_base=unit_price_base,
         revenue_base=revenue_base,
+        event_note=event_note,
     )
 
 

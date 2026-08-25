@@ -32,7 +32,9 @@ python -m src.cli data/samples/etsy_orders.csv -o etsy_report --pdf --excel --ex
 python -m src.cli data/samples/shopify_orders.csv data/samples/amazon_orders.csv -o combined --pdf --excel --config config/report.json --db data/history.db
 ```
 
-Platform is auto-detected. Add optional `cost_per_unit` and `stock_quantity` columns to any platform CSV, or define SKU fallbacks in `config/report.json` under `product_overrides` (for example, `"RING-01": {"cost_per_unit": 8.5, "stock_quantity": 12}`). These values enable real-margin and dated stock-runout insights.
+Platform is auto-detected. Add optional `cost_per_unit`, `stock_quantity`, and `event_note` columns to any platform CSV, or define SKU fallbacks in `config/report.json` under `product_overrides` (for example, `"RING-01": {"cost_per_unit": 8.5, "stock_quantity": 12}`). Date-range context can also be supplied under `events`, for example `{"start": "2025-11-20", "end": "2025-11-30", "skus": [], "note": "Black Friday promotion"}`. These values enable real-margin, dated stock-runout, and contextual YoY insights.
+
+The dashboard price simulator requires at least 20 historical sales across three distinct prices. Its output is a directional correlation estimate from observed price and unit changes, not causal elasticity; traffic, promotions, and competitor activity are not available in marketplace order CSVs.
 
 Options:
 - `--platform etsy|shopify|amazon` — force platform

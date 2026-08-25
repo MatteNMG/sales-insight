@@ -89,6 +89,16 @@
   </div>
 </div>
 
+<div class="section" id="scenario-section" style="display:none">
+  <h2>What if I changed the price?</h2>
+  <form id="scenario-form" class="filters">
+    <select id="scenario-product" required></select>
+    <input id="scenario-change" type="number" min="-30" max="30" step="1" value="10" aria-label="Price change percentage">
+    <button type="submit">Estimate revenue</button>
+  </form>
+  <div id="scenario-result" class="upload-meta">Requires at least 20 historical sales across 3 different prices. Estimates are directional, not causal forecasts.</div>
+</div>
+
 <div class="section" id="insights-section" style="display:none">
   <h2>Automatic insights</h2>
   <div id="insights-body" class="insights-list"></div>

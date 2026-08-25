@@ -108,12 +108,13 @@ def test_csv_checker_rejects_wrong_selected_platform():
 
 
 def test_product_cost_and_stock_from_optional_csv_columns():
-    csv_text = ETSY_CSV.replace("Listing Fees", "Listing Fees,cost_per_unit,stock_quantity").replace(
-        "0.40\n", "0.40,8.50,12\n"
-    ).replace("0.60\n", "0.60,18.00,5\n")
+    csv_text = ETSY_CSV.replace("Listing Fees", "Listing Fees,cost_per_unit,stock_quantity,event_note").replace(
+        "0.40\n", "0.40,8.50,12,Holiday promotion\n"
+    ).replace("0.60\n", "0.60,18.00,5,\n")
     orders = normalize(read_csv(StringIO(csv_text)))
     assert orders[0].cost_per_unit == 8.5
     assert orders[0].stock_quantity == 12
+    assert orders[0].event_note == "Holiday promotion"
 
 
 def test_product_cost_and_stock_from_config_fallback():
@@ -123,3 +124,12 @@ def test_product_cost_and_stock_from_config_fallback():
     )
     assert orders[0].cost_per_unit == 8.5
     assert orders[0].stock_quantity == 12
+
+
+def test_event_note_from_config_fallback():
+    orders = normalize(
+        read_csv(StringIO(ETSY_CSV)),
+        events=[{"start": "2025-01-01", "end": "2025-01-31", "skus": ["RING-01"], "note": "January sale"}],
+    )
+    assert orders[0].event_note == "January sale"
+    assert orders[1].event_note is None

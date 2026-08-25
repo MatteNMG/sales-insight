@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, timedelta
+import math
 from statistics import mean
 from typing import Dict, List, Optional, Tuple
 
@@ -159,13 +160,26 @@ def year_over_year_insight(orders: List[UnifiedOrder]) -> List[Insight]:
     previous = by_month[prev_key]
     change = (current - previous) / previous
     direction = "up" if change >= 0 else "down"
+    current_notes = sorted({
+        order.event_note for order in orders
+        if order.order_date.year == latest_year and order.order_date.month == latest_month and order.event_note
+    })
+    previous_notes = sorted({
+        order.event_note for order in orders
+        if order.order_date.year == latest_year - 1 and order.order_date.month == latest_month and order.event_note
+    })
+    context = ""
+    if current_notes:
+        context += f"; current-period context: {', '.join(current_notes)}"
+    if previous_notes:
+        context += f"; prior-year context: {', '.join(previous_notes)}"
     insights: List[Insight] = [
         {
             "type": "yoy_revenue",
             "severity": "info" if abs(change) < 0.1 else ("positive" if change >= 0 else "warning"),
             "message": (
                 f"Revenue for {latest_month:02d}/{latest_year} is "
-                f"{abs(change)*100:.0f}% {direction} vs {latest_month:02d}/{latest_year-1}"
+                f"{abs(change)*100:.0f}% {direction} vs {latest_month:02d}/{latest_year-1}{context}"
             ),
         }
     ]
@@ -209,7 +223,7 @@ def product_correlation_insight(
                 {
                     "type": "product_bundle",
                     "severity": "positive",
-                    "message": f"'{a}' and '{b}' are bought together in {count} orders (lift {lift:.1f}) — consider a bundle",
+                    "message": f"Real-order pattern: customers bought '{a}' with '{b}' in {count} orders (lift {lift:.1f}) — consider a bundle",
                 }
             )
     return insights
@@ -270,6 +284,59 @@ def stock_forecast_insight(
                 }
             )
     return insights
+
+
+def price_scenario(
+    orders: List[UnifiedOrder],
+    product_name: str,
+    price_change_percent: float,
+) -> Optional[dict]:
+    product_orders = [order for order in orders if not order.refund and order.product_name == product_name]
+    prices = sorted({round(order.effective_unit_price, 2) for order in product_orders if order.effective_unit_price > 0})
+    if len(product_orders) < 20 or len(prices) < 3:
+        return None
+
+    grouped: Dict[float, List[float]] = defaultdict(lambda: [0.0, 0.0])
+    for order in product_orders:
+        grouped[round(order.effective_unit_price, 2)][0] += order.quantity
+        grouped[round(order.effective_unit_price, 2)][1] += order.effective_revenue
+    x = [math.log(price) for price in grouped]
+    y = [math.log(values[0]) for values in grouped.values() if values[0] > 0]
+    if len(x) != len(y):
+        return None
+    x_mean, y_mean = mean(x), mean(y)
+    denominator = sum((value - x_mean) ** 2 for value in x)
+    if denominator == 0:
+        return None
+    elasticity = sum((px - x_mean) * (qy - y_mean) for px, qy in zip(x, y)) / denominator
+    elasticity = min(0.0, max(-3.0, elasticity))
+    change = price_change_percent / 100
+    current_revenue = sum(order.effective_revenue for order in product_orders)
+    projected_revenue = current_revenue * (1 + change) * max(0.0, 1 + elasticity * change)
+    confidence = "medium" if len(product_orders) >= 50 and len(prices) >= 4 else "low"
+    return {
+        "product": product_name,
+        "price_change_percent": price_change_percent,
+        "current_revenue": round(current_revenue, 2),
+        "projected_revenue": round(projected_revenue, 2),
+        "elasticity": round(elasticity, 2),
+        "confidence": confidence,
+        "caveat": "Directional estimate from historical price and unit changes; it does not include traffic, promotions, or competitor activity.",
+    }
+
+
+def price_scenario_insight(orders: List[UnifiedOrder]) -> List[Insight]:
+    products = sorted({order.product_name for order in orders})
+    scenarios = [price_scenario(orders, product, 10.0) for product in products]
+    scenarios = [scenario for scenario in scenarios if scenario]
+    if not scenarios:
+        return []
+    scenario = max(scenarios, key=lambda value: value["current_revenue"])
+    return [{
+        "type": "price_scenario",
+        "severity": "info",
+        "message": f"Cautious scenario: a 10% price increase for {scenario['product']} projects revenue of {scenario['projected_revenue']:.2f} versus {scenario['current_revenue']:.2f} ({scenario['confidence']} confidence; historical correlation, not a causal forecast)",
+    }]
 
 
 def cross_platform_performance_insight(orders: List[UnifiedOrder]) -> List[Insight]:
@@ -342,6 +409,7 @@ def generate_insights(orders: List[UnifiedOrder]) -> List[Insight]:
     insights.extend(refund_spike_insight(orders))
     insights.extend(cross_platform_performance_insight(orders))
     insights.extend(fee_anomaly_insight(orders))
+    insights.extend(price_scenario_insight(orders))
     insights.extend(year_over_year_insight(orders))
     insights.extend(product_correlation_insight(orders))
     return insights

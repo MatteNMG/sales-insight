@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS orders (
     revenue REAL NOT NULL,
     cost_per_unit REAL,
     stock_quantity INTEGER,
+    event_note TEXT,
     fees REAL NOT NULL DEFAULT 0.0,
     shipping_cost REAL NOT NULL DEFAULT 0.0,
     refund INTEGER NOT NULL DEFAULT 0,
@@ -49,6 +50,8 @@ def init_db(path: Path) -> None:
             conn.execute("ALTER TABLE orders ADD COLUMN cost_per_unit REAL")
         if "stock_quantity" not in columns:
             conn.execute("ALTER TABLE orders ADD COLUMN stock_quantity INTEGER")
+        if "event_note" not in columns:
+            conn.execute("ALTER TABLE orders ADD COLUMN event_note TEXT")
 
 
 def _order_to_row(order: UnifiedOrder) -> tuple:
@@ -64,6 +67,7 @@ def _order_to_row(order: UnifiedOrder) -> tuple:
         order.revenue,
         order.cost_per_unit,
         order.stock_quantity,
+        order.event_note,
         order.fees,
         order.shipping_cost,
         int(order.refund),
@@ -87,6 +91,7 @@ def _row_to_order(row: sqlite3.Row) -> UnifiedOrder:
         revenue=row["revenue"],
         cost_per_unit=row["cost_per_unit"],
         stock_quantity=row["stock_quantity"],
+        event_note=row["event_note"],
         fees=row["fees"],
         shipping_cost=row["shipping_cost"],
         refund=bool(row["refund"]),
@@ -107,9 +112,9 @@ def upsert_orders(
     sql = """
         INSERT INTO orders (
             platform, order_id, order_date, product_name, sku, quantity,
-            unit_price, currency, revenue, cost_per_unit, stock_quantity,
+            unit_price, currency, revenue, cost_per_unit, stock_quantity, event_note,
             fees, shipping_cost, refund, country, base_currency, unit_price_base, revenue_base
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(platform, order_id, sku) DO UPDATE SET
             order_date=excluded.order_date,
             product_name=excluded.product_name,
@@ -119,6 +124,7 @@ def upsert_orders(
             revenue=excluded.revenue,
             cost_per_unit=excluded.cost_per_unit,
             stock_quantity=excluded.stock_quantity,
+            event_note=excluded.event_note,
             fees=excluded.fees,
             shipping_cost=excluded.shipping_cost,
             refund=excluded.refund,
