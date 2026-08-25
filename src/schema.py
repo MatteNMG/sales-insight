@@ -65,7 +65,8 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "shipping_cost": "Shipping",
         "refund": None,
         "country": "Delivery Country",
-        "stock_quantity": None,
+        "cost_per_unit": "cost_per_unit",
+        "stock_quantity": "stock_quantity",
     },
     "shopify": {
         "order_id": "Name",
@@ -79,7 +80,8 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "shipping_cost": "Shipping",
         "refund": "Financial Status",
         "country": "Shipping Country",
-        "stock_quantity": None,
+        "cost_per_unit": "cost_per_unit",
+        "stock_quantity": "stock_quantity",
     },
     "amazon": {
         "order_id": "order-id",
@@ -93,7 +95,8 @@ PLATFORM_SCHEMA: Dict[str, Dict[str, Any]] = {
         "shipping_cost": ["shipping-fee"],
         "refund": "item-status",
         "country": "ship-country",
-        "stock_quantity": None,
+        "cost_per_unit": "cost_per_unit",
+        "stock_quantity": "stock_quantity",
     },
 }
 

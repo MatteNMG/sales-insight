@@ -1,9 +1,16 @@
 """Tests for metric calculations."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
+from src.insights import (
+    cross_platform_performance_insight,
+    fee_anomaly_insight,
+    low_margin_insight,
+    sales_drop_insight,
+    stock_runout_insight,
+)
 from src.metrics import (
     average_order_value,
     flop_products,
@@ -68,3 +75,47 @@ def test_revenue_by_country_merges_codes_and_names():
     orders[0].country = "IT"
     orders[1].country = "Italy"
     assert revenue_by_country(orders) == {"Italy": 30.0}
+
+
+def _daily_order(day, revenue=100.0, platform="etsy", fees=0.0, stock=None, cost=None):
+    return UnifiedOrder(
+        platform, f"{platform}-{day}", day, "Ring", "R1", 1, revenue, "EUR", revenue,
+        cost_per_unit=cost, fees=fees, stock_quantity=stock,
+    )
+
+
+def test_sales_drop_uses_same_weekday_baseline():
+    orders = [_daily_order(date(2025, 1, 1) + timedelta(days=offset)) for offset in range(28)]
+    orders.extend(_daily_order(date(2025, 1, 29) + timedelta(days=offset), revenue=20.0) for offset in range(7))
+    insights = sales_drop_insight(orders)
+    assert insights and "usual level for these weekdays" in insights[0]["message"]
+
+
+def test_real_margin_includes_material_fees_and_shipping():
+    order = _daily_order(date(2025, 1, 1), cost=80.0, fees=10.0)
+    order.shipping_cost = 5.0
+    insight = low_margin_insight([order])[0]
+    assert "5.0%" in insight["message"]
+
+
+def test_stock_runout_reports_days_and_date():
+    orders = [_daily_order(date(2025, 1, 1) + timedelta(days=offset), stock=9) for offset in range(30)]
+    insight = stock_runout_insight(orders)[0]
+    assert "9 days" in insight["message"]
+    assert "2025-02-08" in insight["message"]
+
+
+def test_cross_platform_compares_net_per_unit():
+    etsy = _daily_order(date(2025, 1, 1), platform="etsy", fees=20.0)
+    shopify = _daily_order(date(2025, 1, 1), platform="shopify", fees=5.0)
+    insight = cross_platform_performance_insight([etsy, shopify])[0]
+    assert "Shopify" in insight["message"] and "Etsy" in insight["message"]
+
+
+def test_fee_anomaly_compares_recent_period():
+    orders = []
+    for offset in range(60):
+        day = date(2025, 1, 1) + timedelta(days=offset)
+        orders.append(_daily_order(day, fees=15.0 if offset >= 30 else 5.0))
+    insight = fee_anomaly_insight(orders)[0]
+    assert "5.0% to 15.0%" in insight["message"]

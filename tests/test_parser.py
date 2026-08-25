@@ -105,3 +105,21 @@ def test_csv_checker_rejects_wrong_selected_platform():
     result = check_csv(BytesIO(ETSY_CSV.encode()), expected_platform="amazon")
     assert result["ok"] is False
     assert "Etsy CSV, not Amazon" in result["error"]
+
+
+def test_product_cost_and_stock_from_optional_csv_columns():
+    csv_text = ETSY_CSV.replace("Listing Fees", "Listing Fees,cost_per_unit,stock_quantity").replace(
+        "0.40\n", "0.40,8.50,12\n"
+    ).replace("0.60\n", "0.60,18.00,5\n")
+    orders = normalize(read_csv(StringIO(csv_text)))
+    assert orders[0].cost_per_unit == 8.5
+    assert orders[0].stock_quantity == 12
+
+
+def test_product_cost_and_stock_from_config_fallback():
+    orders = normalize(
+        read_csv(StringIO(ETSY_CSV)),
+        product_overrides={"RING-01": {"cost_per_unit": 8.5, "stock_quantity": 12}},
+    )
+    assert orders[0].cost_per_unit == 8.5
+    assert orders[0].stock_quantity == 12

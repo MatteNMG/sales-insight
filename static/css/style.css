@@ -76,6 +76,9 @@ h2{font-family:'Fraunces',serif; font-weight:500; font-size:16px; margin:0 0 16p
 }
 
 .chart-box{min-height:300px; border:1px solid var(--line); border-radius:6px; padding:12px; background:var(--paper-2)}
+.insights-list{display:grid; gap:10px}
+.insight-card{padding:12px 14px; border-left:3px solid var(--pine); background:var(--paper-2); border-radius:4px; font-size:13px; line-height:1.5}
+.insight-card.warning,.insight-card.critical{border-color:var(--brick)}
 
 .upload{
   border:1px dashed var(--line); padding:40px 32px; text-align:center;

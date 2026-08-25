@@ -63,6 +63,23 @@ function renderProducts(products) {
   });
 }
 
+function renderInsights(insights) {
+  const section = $('#insights-section');
+  const body = $('#insights-body');
+  body.innerHTML = '';
+  if (!insights || !insights.length) {
+    section.style.display = 'none';
+    return;
+  }
+  insights.forEach(insight => {
+    const card = document.createElement('div');
+    card.className = `insight-card ${insight.severity}`;
+    card.textContent = insight.message;
+    body.appendChild(card);
+  });
+  section.style.display = 'block';
+}
+
 function showSections() {
   $('#empty-state').style.display = 'none';
   $('#charts-section').style.display = 'block';
@@ -75,6 +92,7 @@ function updateView(payload) {
   renderSummary(payload.summary);
   renderCharts(payload.charts);
   renderProducts(payload.summary.top_products);
+  renderInsights(payload.insights);
   showSections();
 }
 

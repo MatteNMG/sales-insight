@@ -37,33 +37,34 @@ def sales_drop_insight(
     orders: List[UnifiedOrder],
     threshold: float = 0.20,
 ) -> List[Insight]:
-    """Flag products whose recent sales dropped >= threshold vs older period."""
+    """Compare the latest week with the same weekdays in the prior four weeks."""
     if not orders:
         return []
     latest = max(o.order_date for o in orders)
-    cutoff = latest - timedelta(days=30)
+    recent_start = latest - timedelta(days=6)
+    baseline_start = recent_start - timedelta(days=28)
+    if min(o.order_date for o in orders) > baseline_start:
+        return []
 
-    recent: Dict[str, float] = defaultdict(float)
-    older: Dict[str, float] = defaultdict(float)
-    for o in orders:
-        if o.refund:
-            continue
-        target = recent if o.order_date > cutoff else older
-        target[o.product_name] += o.revenue
+    daily: Dict[str, Dict[date, float]] = defaultdict(lambda: defaultdict(float))
+    for order in orders:
+        if not order.refund:
+            daily[order.product_name][order.order_date] += order.effective_revenue
 
     insights: List[Insight] = []
-    for product in set(recent) | set(older):
-        before = older.get(product, 0.0)
-        after = recent.get(product, 0.0)
-        if before > 0 and (before - after) / before >= threshold:
-            drop = ((before - after) / before) * 100
-            insights.append(
-                {
-                    "type": "sales_drop",
-                    "severity": "warning",
-                    "message": f"{product} sales dropped {drop:.0f}% in the last 30 days",
-                }
-            )
+    for product, values in daily.items():
+        recent = sum(values.get(recent_start + timedelta(days=offset), 0.0) for offset in range(7))
+        expected = 0.0
+        for offset in range(7):
+            weekday = recent_start + timedelta(days=offset)
+            expected += mean([values.get(weekday - timedelta(days=7 * week), 0.0) for week in range(1, 5)])
+        if expected > 0 and recent <= expected * (1 - threshold):
+            drop = (expected - recent) / expected * 100
+            insights.append({
+                "type": "seasonal_sales_drop",
+                "severity": "warning",
+                "message": f"{product} sales are {drop:.0f}% below the usual level for these weekdays",
+            })
     return insights
 
 
@@ -80,18 +81,20 @@ def low_margin_insight(
         if o.refund:
             continue
         revenues[o.product_name] += o.revenue
+    total_rev = sum(revenues.values())
+    portfolio_rate = sum(margins.values()) / total_rev if total_rev else 0.0
     insights: List[Insight] = []
     for product, margin in margins.items():
         rev = revenues.get(product, 0.0)
-        if rev > 0 and margin / rev < threshold_percent:
-            rate = (margin / rev) * 100
-            insights.append(
-                {
-                    "type": "low_margin",
-                    "severity": "warning",
-                    "message": f"{product} margin is {rate:.1f}% (below {threshold_percent*100:.0f}% threshold)",
-                }
-            )
+        if rev <= 0:
+            continue
+        rate = margin / rev
+        if rate < threshold_percent or rate < portfolio_rate - 0.10:
+            insights.append({
+                "type": "low_margin",
+                "severity": "critical" if rate < 0 else "warning",
+                "message": f"{product} margin is {rate*100:.1f}% versus {portfolio_rate*100:.1f}% across the portfolio",
+            })
     return insights
 
 
@@ -101,14 +104,16 @@ def stock_runout_insight(
 ) -> List[Insight]:
     """Flag products likely to run out of stock soon."""
     runouts = stock_runout_days(orders)
+    latest = max((order.order_date for order in orders), default=date.today())
     insights: List[Insight] = []
     for product, days in runouts.items():
         if days is not None and days <= threshold_days:
+            runout_date = latest + timedelta(days=max(1, round(days)))
             insights.append(
                 {
                     "type": "stock_runout",
                     "severity": "critical" if days <= 7 else "warning",
-                    "message": f"{product} stock may run out in {days:.0f} days",
+                    "message": f"At the current sales pace, {product} will run out in {days:.0f} days ({runout_date.isoformat()})",
                 }
             )
     return insights
@@ -267,14 +272,76 @@ def stock_forecast_insight(
     return insights
 
 
+def cross_platform_performance_insight(orders: List[UnifiedOrder]) -> List[Insight]:
+    performance: Dict[str, Dict[str, List[float]]] = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))
+    names: Dict[str, str] = {}
+    for order in orders:
+        if order.refund:
+            continue
+        key = order.sku or order.product_name.casefold()
+        names[key] = order.product_name
+        performance[key][order.platform][0] += order.net_revenue
+        performance[key][order.platform][1] += order.quantity
+
+    insights: List[Insight] = []
+    for key, platforms in performance.items():
+        if len(platforms) < 2:
+            continue
+        per_unit = {platform: totals[0] / totals[1] for platform, totals in platforms.items() if totals[1]}
+        if len(per_unit) < 2:
+            continue
+        best = max(per_unit, key=per_unit.get)
+        worst = min(per_unit, key=per_unit.get)
+        if per_unit[worst] > 0 and per_unit[best] >= per_unit[worst] * 1.10:
+            difference = (per_unit[best] / per_unit[worst] - 1) * 100
+            insights.append({
+                "type": "cross_platform_performance",
+                "severity": "info",
+                "message": f"{names[key]} earns {difference:.0f}% more net per unit on {best.title()} than {worst.title()} after fees and shipping",
+            })
+    return insights
+
+
+def fee_anomaly_insight(orders: List[UnifiedOrder], threshold: float = 0.20) -> List[Insight]:
+    if not orders:
+        return []
+    latest = max(order.order_date for order in orders)
+    recent_start = latest - timedelta(days=29)
+    previous_start = recent_start - timedelta(days=30)
+    totals: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for order in orders:
+        if order.refund or order.order_date < previous_start:
+            continue
+        period = "recent" if order.order_date >= recent_start else "previous"
+        totals[order.platform][f"{period}_fees"] += order.fees
+        totals[order.platform][f"{period}_revenue"] += order.effective_revenue
+
+    insights: List[Insight] = []
+    for platform, values in totals.items():
+        previous_revenue = values["previous_revenue"]
+        recent_revenue = values["recent_revenue"]
+        if not previous_revenue or not recent_revenue:
+            continue
+        previous_rate = values["previous_fees"] / previous_revenue
+        recent_rate = values["recent_fees"] / recent_revenue
+        if recent_rate >= previous_rate * (1 + threshold) and recent_rate - previous_rate >= 0.02:
+            insights.append({
+                "type": "fee_anomaly",
+                "severity": "warning",
+                "message": f"{platform.title()} fees rose from {previous_rate*100:.1f}% to {recent_rate*100:.1f}% of revenue in the last 30 days",
+            })
+    return insights
+
+
 def generate_insights(orders: List[UnifiedOrder]) -> List[Insight]:
     """Return all heuristic insights."""
     insights: List[Insight] = []
     insights.extend(sales_drop_insight(orders))
     insights.extend(low_margin_insight(orders))
     insights.extend(stock_runout_insight(orders))
-    insights.extend(stock_forecast_insight(orders))
     insights.extend(refund_spike_insight(orders))
+    insights.extend(cross_platform_performance_insight(orders))
+    insights.extend(fee_anomaly_insight(orders))
     insights.extend(year_over_year_insight(orders))
     insights.extend(product_correlation_insight(orders))
     return insights

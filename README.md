@@ -32,7 +32,9 @@ python -m src.cli data/samples/etsy_orders.csv -o etsy_report --pdf --excel --ex
 python -m src.cli data/samples/shopify_orders.csv data/samples/amazon_orders.csv -o combined --pdf --excel --config config/report.json --db data/history.db
 ```
 
-Platform is auto-detected. Options:
+Platform is auto-detected. Add optional `cost_per_unit` and `stock_quantity` columns to any platform CSV, or define SKU fallbacks in `config/report.json` under `product_overrides` (for example, `"RING-01": {"cost_per_unit": 8.5, "stock_quantity": 12}`). These values enable real-margin and dated stock-runout insights.
+
+Options:
 - `--platform etsy|shopify|amazon` — force platform
 - `--currency EUR` — default currency when missing
 - `--base-currency EUR` — convert all amounts to this currency

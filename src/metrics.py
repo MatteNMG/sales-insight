@@ -101,11 +101,10 @@ def margin_by_product(orders: List[UnifiedOrder]) -> Dict[str, float]:
     has_cost = False
     for o in _active(orders):
         revenue[o.product_name] += o.effective_revenue
+        cost[o.product_name] += o.fees + o.shipping_cost
         if o.cost_per_unit is not None:
             cost[o.product_name] += o.cost_per_unit * o.quantity
             has_cost = True
-        else:
-            cost[o.product_name] += o.fees + o.shipping_cost
     return {name: revenue[name] - cost[name] for name in revenue}
 
 

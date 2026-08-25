@@ -20,6 +20,7 @@ from src.demo import generate_demo_orders
 from src.export_excel import export_excel
 from src.feedback import list_feedback, save_feedback
 from src.history import load_orders, upsert_orders
+from src.insights import generate_insights
 from src.metrics import (
     average_order_value,
     revenue_by_date,
@@ -90,6 +91,7 @@ def _payload(orders: List[Any], include_orders: bool = True) -> Dict[str, Any]:
     return {
         "summary": summary,
         "charts": build_charts(orders),
+        "insights": generate_insights(orders),
         "orders": [
             {
                 "date": o.order_date.isoformat(),
@@ -168,11 +170,13 @@ def upload():
 
     try:
         df = read_csv(io.BytesIO(content))
+        report_config = ReportConfig.from_file(Path("config/report.json"))
         orders = normalize(
             df,
             platform=platform or validation["platform"],
             default_currency=currency,
             base_currency=base,
+            product_overrides=report_config.extra.get("product_overrides", {}),
         )
     except Exception:
         return jsonify({"error": "We could not process this CSV — verify the file format and try again."}), 400

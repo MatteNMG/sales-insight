@@ -32,6 +32,7 @@ def normalize(
     platform: Optional[str] = None,
     default_currency: str = "EUR",
     base_currency: str = "EUR",
+    product_overrides: Optional[dict] = None,
 ) -> List[UnifiedOrder]:
     """Convert a platform DataFrame into a list of UnifiedOrder objects."""
     if platform is None:
@@ -43,6 +44,11 @@ def normalize(
     rows: List[UnifiedOrder] = []
     for _, row in df.iterrows():
         order = _row_to_order(row, platform, mapping, default_currency, base_currency)
+        override = (product_overrides or {}).get(order.sku) or (product_overrides or {}).get(order.product_name) or {}
+        if order.cost_per_unit is None and override.get("cost_per_unit") is not None:
+            order.cost_per_unit = _coerce_money(override["cost_per_unit"])
+        if order.stock_quantity is None and override.get("stock_quantity") is not None:
+            order.stock_quantity = _coerce_quantity(override["stock_quantity"])
         rows.append(order)
     return rows
 
@@ -74,6 +80,10 @@ def _row_to_order(
 
     shipping = _coerce_money(get("shipping_cost"))
     fees = _coerce_money(get("fees"))
+    cost_value = get("cost_per_unit")
+    stock_value = get("stock_quantity")
+    cost_per_unit = _coerce_money(cost_value) if cost_value is not None and not pd.isna(cost_value) else None
+    stock_quantity = _coerce_quantity(stock_value) if stock_value is not None and not pd.isna(stock_value) else None
 
     refund_value = get("refund")
     refund = _parse_refund(refund_value)
@@ -101,11 +111,12 @@ def _row_to_order(
         unit_price=unit_price,
         currency=currency,
         revenue=revenue,
-        cost_per_unit=None,
+        cost_per_unit=cost_per_unit,
         fees=fees,
         shipping_cost=shipping,
         refund=refund,
         country=country if country and country.lower() != "nan" else None,
+        stock_quantity=stock_quantity,
         base_currency=base_currency,
         unit_price_base=unit_price_base,
         revenue_base=revenue_base,

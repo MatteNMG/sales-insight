@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS orders (
     unit_price REAL NOT NULL,
     currency TEXT NOT NULL,
     revenue REAL NOT NULL,
+    cost_per_unit REAL,
+    stock_quantity INTEGER,
     fees REAL NOT NULL DEFAULT 0.0,
     shipping_cost REAL NOT NULL DEFAULT 0.0,
     refund INTEGER NOT NULL DEFAULT 0,
@@ -42,6 +44,11 @@ def init_db(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.executescript(SCHEMA_SQL)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(orders)")}
+        if "cost_per_unit" not in columns:
+            conn.execute("ALTER TABLE orders ADD COLUMN cost_per_unit REAL")
+        if "stock_quantity" not in columns:
+            conn.execute("ALTER TABLE orders ADD COLUMN stock_quantity INTEGER")
 
 
 def _order_to_row(order: UnifiedOrder) -> tuple:
@@ -55,6 +62,8 @@ def _order_to_row(order: UnifiedOrder) -> tuple:
         order.unit_price,
         order.currency,
         order.revenue,
+        order.cost_per_unit,
+        order.stock_quantity,
         order.fees,
         order.shipping_cost,
         int(order.refund),
@@ -76,6 +85,8 @@ def _row_to_order(row: sqlite3.Row) -> UnifiedOrder:
         unit_price=row["unit_price"],
         currency=row["currency"],
         revenue=row["revenue"],
+        cost_per_unit=row["cost_per_unit"],
+        stock_quantity=row["stock_quantity"],
         fees=row["fees"],
         shipping_cost=row["shipping_cost"],
         refund=bool(row["refund"]),
@@ -96,9 +107,9 @@ def upsert_orders(
     sql = """
         INSERT INTO orders (
             platform, order_id, order_date, product_name, sku, quantity,
-            unit_price, currency, revenue, fees, shipping_cost, refund,
-            country, base_currency, unit_price_base, revenue_base
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            unit_price, currency, revenue, cost_per_unit, stock_quantity,
+            fees, shipping_cost, refund, country, base_currency, unit_price_base, revenue_base
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(platform, order_id, sku) DO UPDATE SET
             order_date=excluded.order_date,
             product_name=excluded.product_name,
@@ -106,6 +117,8 @@ def upsert_orders(
             unit_price=excluded.unit_price,
             currency=excluded.currency,
             revenue=excluded.revenue,
+            cost_per_unit=excluded.cost_per_unit,
+            stock_quantity=excluded.stock_quantity,
             fees=excluded.fees,
             shipping_cost=excluded.shipping_cost,
             refund=excluded.refund,
